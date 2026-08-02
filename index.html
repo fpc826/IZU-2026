@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Izu Trip 2026</title>
+    
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入字體：Noto Sans TC 和 Shippori Mincho -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Shippori+Mincho:wght@400;600&display=swap" rel="stylesheet">
+    <!-- 載入 Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* --- 顏色設定 (夏天綠色系) --- */
+            --primary-color: #2b7a0b;     /* 深夏綠 主題色 */
+            --accent-color: #E8F5E9;      /* 淺薄荷綠 (亮點區底色) */
+            --light-blue: #4CAF50;        /* 亮綠色 (圖示圓圈) */
+            --bg-color: #F4F8F4;          /* 極淺綠白底色 */
+            --card-bg: #FFFFFF;
+            --text-main: #1B3320;         /* 深墨綠色文字 */
+            --text-sub: #4A6050;          /* 淺墨綠色文字 */
+            --line-color: #81C784;        /* 時間軸線條 (中綠色) */
+
+            /* --- 版面與字體大小設定 --- */
+            --timeline-icon-size: 38px;
+            --timeline-icon-font-size: 16px;
+            --title-font-size: 20px;
+            --note-font-size: 17px;
+            --meta-font-size: 14px;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, .serif-font {
+            font-family: 'Shippori Mincho', serif;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .timeline-line {
+            position: absolute;
+            left: calc(var(--timeline-icon-size) / 2);
+            top: 40px;
+            bottom: -20px;
+            width: 3px;
+            background-color: var(--line-color);
+            z-index: 0;
+            transform: translateX(-50%);
+            opacity: 0.4;
+        }
+        .last-item .timeline-line { display: none; }
+
+        .tab-active {
+            background-color: white;
+            color: var(--primary-color);
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .tab-inactive {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(0,0,0,0.05);
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .nav-btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="shadow-md z-20 flex-none px-6 py-4 flex justify-between items-center" style="background-color: var(--primary-color);">
+        <div>
+            <h1 class="text-xl font-bold tracking-widest text-white">IZU 2026</h1>
+            <p class="text-xs mt-1 text-white opacity-90">伊豆半島・夏末自駕・海景與溫泉五日旅</p>
+        </div>
+        <div class="text-right">
+             <span id="header-date" class="text-sm font-medium text-white">SEP 09 - 13</span>
+        </div>
+    </header>
+
+    <nav class="z-10 flex-none py-3 overflow-x-auto no-scrollbar px-4" style="background-color: var(--primary-color); border-top: 1px solid rgba(255,255,255,0.1);">
+        <div class="flex space-x-3 min-w-max" id="tab-container">
+            <!-- Tabs 將由 JavaScript 生成 -->
+        </div>
+    </nav>
+
+    <main class="flex-1 flex overflow-hidden relative">
+        <!-- 行程列表 (左側/手機全寬) -->
+        <div class="w-full md:w-1/2 lg:w-5/12 overflow-y-auto no-scrollbar p-4 pb-24" id="itinerary-container">
+            <!-- 行程內容由 JS 渲染 -->
+        </div>
+
+        <!-- 亮點 & 筆記 (右側/僅桌面顯示) -->
+        <div class="hidden md:flex md:w-1/2 lg:w-7/12 bg-white border-l border-gray-100 flex-col relative h-full">
+            <div id="hero-color-area" class="h-1/3 w-full flex-none p-8 flex flex-col justify-end transition-colors duration-500 rounded-bl-xl bg-[var(--accent-color)]" style="background-color: var(--accent-color);">
+                <h2 id="hero-title" class="text-3xl font-bold serif-font mb-2 text-[var(--text-main)]">準備出發</h2>
+                <p id="hero-desc" class="text-sm leading-relaxed opacity-80 text-[var(--text-sub)]">漫步在伊豆的海岸與翠綠山林中，享受夏末初秋的愜意旅程。</p>
+            </div>
+            <div class="h-2/3 p-8 overflow-y-auto bg-white flex-1">
+                <h3 class="text-lg font-bold mb-4 border-b pb-2 border-gray-200" style="color: var(--text-main);">本日亮點 & 導遊筆記</h3>
+                <div id="guide-notes" class="prose text-sm space-y-4 leading-7" style="color: var(--text-sub);">
+                    <!-- 筆記內容由 JS 渲染 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // === 資料庫 ===
+        const itineraryData = [
+            {
+                day: "Day 1",
+                date: "2026-09-09",
+                title: "紅眼啟程・熱海風華",
+                summary: "從機場直奔羽田溫泉洗去疲憊，品嚐靜岡必吃漢堡排，探索熱海溫泉街。",
+                guideNotes: `<p><strong>【本日特色】</strong></p>
+                <ul>
+                    <li><strong>泉天空之湯：</strong> 位於羽田機場旁，是紅眼班機抵達後最棒的補眠與洗漱聖地，可看見飛機起降與富士山。</li>
+                    <li><strong>炭烤漢堡排 爽やか (Sawayaka)：</strong> 靜岡縣限定的「神級漢堡排」，牛肉切開內部呈現半熟粉紅色，肉汁爆發，建議點招牌拳頭漢堡排。</li>
+                    <li><strong>來宮神社：</strong> 擁有兩千年歷史的大楠樹，據說繞樹走一圈能延壽一年，是伊豆知名的能量景點。</li>
+                </ul>
+                <p><strong>【伴手禮推薦】</strong></p>
+                <ul>
+                    <li><strong>熱海站前商店街：</strong> 必買「熱海布丁」(復古包裝超可愛)、「溫泉饅頭」(現蒸熱騰騰)、以及各類海鮮乾貨。</li>
+                </ul>`,
+                activities: [
+                    { 
+                        time: "前日20:00", icon: "fa-car", title: "台中出發", location: "台中", 
+                        content: [{ text: "已預約機場接送，途經中壢、前往桃園機場。", image: "" }]
+                    },
+                    { 
+                        time: "00:10", icon: "fa-plane-departure", title: "桃園飛羽田(IT216)", location: "桃園國際機場", 
+                        content: [{ text: "請在飛機上盡量休息儲備體力。<br/>預計04:25抵達。", image: "" }],
+                        links: [{ url: "https://www.taoyuan-airport.com/", title: "桃園機場" }]
+                    },
+                    { 
+                        time: "05:30", icon: "fa-hot-tub-person", title: "泉天空之湯 洗漱休息", location: "Izumi Tenku no Yu Haneda Airport", 
+                        content: [{ text: "前往羽田機場共構的溫泉設施「泉天空之湯」。<br/>在這裡泡個湯洗去紅眼班機的疲憊，換上乾淨的衣服迎接旅程。", image: "" }],
+                        links: [{ url: "https://www.shopping-sumitomo-rd.com/chi/haneda/spa-izumi/", title: "官網" }]
+                    },
+                    { 
+                        time: "08:42", icon: "fa-car-side", title: "Nippon Rent-a-car 取車", location: "Nippon Rent-a-car 羽田", 
+                        content: [{ text: "辦理租車手續，確認車輛狀況、ETC卡及導航設定。正式展開伊豆自駕之旅！", image: "" }]
+                    },
+                    { 
+                        time: "10:55", icon: "fa-burger", title: "【靜岡靈魂美食】", location: "Sawayaka Kannami", 
+                        content: [{ text: "靜岡縣民最自豪的炭烤漢堡排連鎖店 Sawayaka (炭焼きレストランさわやか 函南店)。服務員會在桌邊將圓形的漢堡排切半並壓在鐵板上，滋滋作響伴隨肉香，是視覺與味覺的雙重享受。", image: "https://images.unsplash.com/photo-1550547660-d9450f859349?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "12:52", icon: "fa-tree", title: "【兩千年的生命力】", location: "來宮神社", 
+                        content: [{ text: "熱海著名的能量景點 (Power Spot)。本殿後方有一棵樹齡超過兩千年的大楠樹，傳說將心中的願望默念並繞樹走一圈，願望便能實現。", image: "https://images.unsplash.com/photo-1517585093740-d6e87f6e07cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "13:29", icon: "fa-shop", title: "【復古溫泉街散策】", location: "熱海站前平和通商店街", 
+                        content: [{ text: "充滿昭和風情的商店街。可以買個剛蒸好的溫泉饅頭，或是品嚐超人氣的「熱海布丁」，順便採購當地的特產乾貨。", image: "" }]
+                    },
+                    { 
+                        time: "15:28", icon: "fa-hotel", title: "入住：Village Izukogen", location: "Village Izukogen", 
+                        content: [{ text: "抵達伊豆高原的渡假村飯店，辦理入住。享受設施與晚餐，早點休息補足精神。", image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    }
+                ]
+            },
+            {
+                day: "Day 2",
+                date: "2026-09-10",
+                title: "火山絕景・歷史下田",
+                summary: "登錄抹茶色的大室山火山口，漫步壯麗的城崎海岸，感受白濱神社會與黑船來航的下田歷史。",
+                guideNotes: `<p><strong>【本日特色】</strong></p>
+                <ul>
+                    <li><strong>大室山：</strong> 伊豆半島的地標，外觀像是一個巨大的綠色倒扣碗（抹茶布丁）。搭乘雙人吊椅上山，可以沿著火山口邊緣走一圈(約1公里)，天氣好時能看見富士山與相模灣。</li>
+                    <li><strong>城崎海岸：</strong> 由大室山火山爆發的熔岩冷卻形成。最著名的是「門脇吊橋」，懸掛在海面上方，驚險刺激，海景壯闊。</li>
+                    <li><strong>白濱神社：</strong> 擁有2400年歷史的伊豆最古老神社，最美的是建在海邊岩石上的紅色鳥居，與白沙、藍海形成絕美對比。</li>
+                </ul>
+                <p><strong>【伴手禮推薦】</strong></p>
+                <ul>
+                    <li><strong>大室山：</strong> 火山口造型的小仙貝或仙人掌公園相關周邊。</li>
+                    <li><strong>道の駅 開国下田みなと：</strong> 下田是日本金目鯛漁獲量最大的港口，推薦購買「金目鯛仙貝」、「金目鯛煮汁」(用來煮魚超搭) 以及以黑船為造型的甜點。</li>
+                </ul>`,
+                activities: [
+                    { 
+                        time: "09:00", icon: "fa-car", title: "出發", location: "Village Izukogen", 
+                        content: [{ text: "享用飯店早餐後，精神飽滿地出發。", image: "" }]
+                    },
+                    { 
+                        time: "09:08", icon: "fa-mountain", title: "【漫步抹茶布丁火山口】", location: "大室山", 
+                        content: [{ text: "搭乘宛如滑雪場的雙人吊椅輕鬆登頂。大室山是國家天然紀念物，為了保護山體禁止步行上山。火山口步道視野極佳，是伊豆必訪絕景。", image: "https://images.unsplash.com/photo-1574868991734-f89a9f939e6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }],
+                        links: [{ url: "https://omuroyama.com/", title: "大室山官網" }]
+                    },
+                    { 
+                        time: "10:54", icon: "fa-bridge-water", title: "【懸崖上的心跳加速】", location: "城崎海岸", 
+                        content: [{ text: "走在全長48公尺、高23公尺的門脇吊橋上，腳底下就是海浪拍打熔岩的壯麗景色。步道兩側的松樹林也十分清幽。", image: "https://images.unsplash.com/photo-1506509633633-5c74230491fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "12:46", icon: "fa-torii-gate", title: "【白沙與紅色鳥居】", location: "伊古奈比咩命神社 (白濱神社)", 
+                        content: [{ text: "伊豆最古老的神社。穿過靜謐的神社樹林來到海邊，會看到巨大的岩石上矗立著面向大海的紅色鳥居，景色神聖且夢幻。", image: "https://images.unsplash.com/photo-1545569341-9eb8b46dc576?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "13:34", icon: "fa-ship", title: "【黑船來航與金目鯛】", location: "道の駅 開国下田みなと", 
+                        content: [{ text: "下田港是當年美國培里艦隊「黑船」來航，日本開國的舞台。在這裡的休息站可以吃午餐，務必品嚐下田特產「金目鯛」料理（如金目鯛漢堡或定食）。", image: "" }],
+                        links: [{ url: "https://www.kaikokushimodaminato.co.jp/", title: "道の駅官網" }]
+                    },
+                    { 
+                        time: "14:44", icon: "fa-hotel", title: "入住：下田東急飯店", location: "下田東急飯店", 
+                        content: [{ text: "建於能俯瞰大浦灣的高台上，擁有絕佳海景的經典度假飯店。傍晚可在周邊海灘散步或享受飯店設施。", image: "https://images.unsplash.com/photo-1610641818989-c2051b5e2cfd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    }
+                ]
+            },
+            {
+                day: "Day 3",
+                date: "2026-09-11",
+                title: "南伊豆奇岩・天窗洞",
+                summary: "尋找愛心海蝕洞，前往半島最南端，午後搭船穿梭於西伊豆的藍洞之中。",
+                guideNotes: `<p><strong>【本日特色】</strong></p>
+                <ul>
+                    <li><strong>龍宮窟：</strong> 波浪侵蝕形成的海蝕洞，從洞穴上方往下看，形狀宛如一顆愛心，是熱門的打卡景點。</li>
+                    <li><strong>石廊崎燈塔：</strong> 位於伊豆半島最南端的懸崖上，擁有270度的開闊海景，能感受到強烈的海風與壯闊的太平洋。</li>
+                    <li><strong>堂島天窗洞：</strong> 被譽為「日本的藍洞」。搭乘遊覽船進入海蝕洞，陽光從洞頂的天窗灑下，海水呈現夢幻的翡翠綠與寶石藍。（※需注意天氣，若風浪過大遊覽船可能停駛）</li>
+                </ul>
+                <p><strong>【伴手禮推薦】</strong></p>
+                <ul>
+                    <li><strong>農林水産物直売所 湯の花：</strong> 南伊豆當地的農漁產市集，可以買到新鮮便宜的當季水果、伊豆香菇。</li>
+                    <li><strong>西伊豆心太 (ところてん)：</strong> 西伊豆盛產石花菜，做成的「心太」(類似寒天果凍) 搭配黑蜜或三杯醋，是清涼消暑的最佳甜點。</li>
+                </ul>`,
+                activities: [
+                    { 
+                        time: "09:00", icon: "fa-car", title: "出發", location: "下田東急飯店", 
+                        content: [{ text: "離開下田，沿著海岸線往南伊豆與西伊豆前進。", image: "" }]
+                    },
+                    { 
+                        time: "09:15", icon: "fa-heart", title: "【仰望天空的愛心】", location: "龍宮窟", 
+                        content: [{ text: "走進洞穴底部，抬頭可以看見圓形的天空；走到洞穴上方的遊步道往下看，則能看見大自然雕刻出的完美愛心形狀。", image: "https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "10:30", icon: "fa-store", title: "【南伊豆的廚房】", location: "農林水産物直売所 湯の花", 
+                        content: [{ text: "在地人愛逛的農產直賣所。體驗在地生活感，推薦買些當地產的蜜柑或小零嘴在車上吃。", image: "" }]
+                    },
+                    { 
+                        time: "11:49", icon: "fa-tower-observation", title: "【半島最南端的風與海】", location: "Cape Irozaki Lighthouse", 
+                        content: [{ text: "抵達伊豆半島最南端的石廊崎。白色的燈塔佇立在險峻的斷崖上，崖下還有建在岩壁中的石室神社，景色十分獨特。", image: "https://images.unsplash.com/photo-1507963321524-817b18cb6669?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "13:46", icon: "fa-ferry", title: "【西伊豆的神祕藍洞】", location: "堂ヶ島天窓洞", 
+                        content: [{ text: "來到西伊豆的堂島。推薦搭乘堂島遊覽船，船隻會開進天然的海蝕洞「天窗洞」內，陽光從頂部直射入水面，閃耀著迷人的藍綠色光芒。", image: "https://images.unsplash.com/photo-1498623116890-37e912163d5d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }],
+                        links: [{ url: "https://izudougasima-yuransen.com/", title: "遊覽船官網" }]
+                    },
+                    { 
+                        time: "14:48", icon: "fa-hotel", title: "入住：堂島新銀水飯店", location: "堂島新銀水飯店", 
+                        content: [{ text: "西伊豆著名的頂級溫泉旅館。堂島以「夕陽」聞名全日本，務必在傍晚時分於大廳或露天溫泉欣賞被染成金黃色的海面與奇岩。", image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    }
+                ]
+            },
+            {
+                day: "Day 4",
+                date: "2026-09-12",
+                title: "黃金海岸・綠意天城",
+                summary: "告別西伊豆海岸，轉入天城山脈，探訪淨蓮瀑布與山葵田，午後抵達伊豆長岡享受溫泉與燒肉。",
+                guideNotes: `<p><strong>【本日特色】</strong></p>
+                <ul>
+                    <li><strong>黃金崎：</strong> 夕陽照射下岩石會呈現黃金色的美麗海岸，其中一塊突出的岩石外型酷似「馬頭」，被稱為馬頭岩。</li>
+                    <li><strong>天城越え (天城山道)：</strong> 日本著名演歌的舞台。進入山區後氣溫微涼，充滿森林芬多精。</li>
+                    <li><strong>淨蓮瀑布：</strong> 伊豆名瀑，落差25公尺。瀑布下方有著大片清澈溪水孕育的「山葵田」(Wasabi)，是伊豆最具代表性的風景之一。</li>
+                </ul>
+                <p><strong>【伴手禮推薦】</strong></p>
+                <ul>
+                    <li><strong>天城越え休息站 / 淨蓮瀑布：</strong> 絕對要品嚐「現磨山葵冰淇淋」，微辣與奶香的奇妙結合！並可購買新鮮山葵、山葵鹽、山葵香鬆。</li>
+                    <li><strong>伊豆のへそ (Izu-no-Heso)：</strong> 這裡有一間超大型的「草莓工廠 (BonBonBERRY)」，販售滿滿的草莓甜點、草莓年輪蛋糕，包裝精美，非常適合送禮。</li>
+                </ul>`,
+                activities: [
+                    { 
+                        time: "09:00", icon: "fa-car", title: "出發", location: "堂島新銀水飯店", 
+                        content: [{ text: "伴隨著西伊豆的晨間海景，驅車往北準備進入山區。", image: "" }]
+                    },
+                    { 
+                        time: "09:12", icon: "fa-horse-head", title: "【望海的駿馬】", location: "Koganezaki", 
+                        content: [{ text: "黃金崎公園以安山岩受溫泉水變質而成的黃褐色岩壁著稱。尋找那塊面向大海、栩栩如生的「馬頭岩」拍張照吧！", image: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "10:37", icon: "fa-leaf", title: "【昭和風情天城路】", location: "Roadside Station Amagigoe", 
+                        content: [{ text: "進入天城山區的休息站。這裡被蔥鬱的森林包圍，可以在此品嚐名物「山葵冰淇淋」。", image: "" }]
+                    },
+                    { 
+                        time: "11:11", icon: "fa-water", title: "【清涼飛瀑與翠綠山葵】", location: "淨蓮瀑布", 
+                        content: [{ text: "沿著階梯走下溪谷，感受淨蓮瀑布的水花與涼意。瀑布旁就是利用天城山純淨泉水栽培的山葵田，綠意盎然，非常療癒。", image: "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "12:25", icon: "fa-mug-hot", title: "【月瀨溪谷休憩】", location: "Roadside Station Izu-tsukigase", 
+                        content: [{ text: "伊豆月瀨休息站，可以在這裡稍作休息，享用以當地食材製作的午餐，欣賞狩野川的美景。", image: "" }]
+                    },
+                    { 
+                        time: "13:07", icon: "fa-torii-gate", title: "【修善寺的靜謐守護】", location: "日枝神社 (修善寺)", 
+                        content: [{ text: "位於修善寺溫泉區旁。神社內有兩棵根部相連的巨大杉樹（子安之杉），是祈求安產與結緣的聖地。附近就是充滿小京都風情的修善寺溫泉街與竹林小徑。", image: "https://images.unsplash.com/photo-1492571350019-22de08371fd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "14:48", icon: "fa-strawberry", title: "【草莓控的天堂】", location: "Roadside Station Izu-no-Heso", 
+                        content: [{ text: "「伊豆之臍」休息站。除了農產外，最大的亮點是附設的草莓專賣店 Izu Ichigo Factory，滿滿的粉紅色草莓甜點讓人少女心爆發。", image: "" }]
+                    },
+                    { 
+                        time: "15:26", icon: "fa-hotel", title: "入住：New Hakkeien", location: "New Hakkeien", 
+                        content: [{ text: "抵達伊豆長岡溫泉的「新八景園」飯店。頂樓的露天風呂擁有極佳的視野，天氣好時可一邊泡湯一邊眺望富士山。", image: "https://images.unsplash.com/photo-1583997103606-d74c0e6616eb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "17:00", icon: "fa-fire", title: "【大口吃肉的夜晚】", location: "Yakiniku Karubiitcho Ohitoten", 
+                        content: [{ text: "晚餐前往「燒肉 Karubi 一丁 大仁店」，享受美味的日式燒肉，慰勞連續幾天自駕的辛勞，為明天的歸途儲備體力。", image: "" }]
+                    }
+                ]
+            },
+            {
+                day: "Day 5",
+                date: "2026-09-13",
+                title: "碧海藍天・賦歸",
+                summary: "搭纜車登頂碧綠台賞富士山，穿越東京灣海上公路，在成田山參拜後滿載而歸。",
+                guideNotes: `<p><strong>【本日特色】</strong></p>
+                <ul>
+                    <li><strong>伊豆全景公園 (碧綠台)：</strong> 搭乘纜車直達山頂的 Ao Terrace。坐在水盤旁的沙發上，將富士山與駿河灣的絕景盡收眼底，是伊豆最潮的打卡點。</li>
+                    <li><strong>海螢火蟲停車區 (Umihotaru)：</strong> 位於東京灣 Aqua-Line 海底隧道與跨海大橋的交界點（人工島上）。被海景360度環繞的超大型休息站。</li>
+                    <li><strong>成田山新勝寺：</strong> 擁有千年歷史的關東信仰中心，表參道上充滿江戶風情。</li>
+                </ul>
+                <p><strong>【伴手禮推薦】</strong></p>
+                <ul>
+                    <li><strong>伊豆全景公園：</strong> 富士山造型的羊羹、靜岡抹茶。</li>
+                    <li><strong>成田山表參道：</strong> 這裡最有名的是「鰻魚飯」（如川豐本店），以及現烤的「仙貝」。作為離開日本前的最後一餐與採買非常完美。</li>
+                </ul>`,
+                activities: [
+                    { 
+                        time: "09:00", icon: "fa-car", title: "出發", location: "New Hakkeien", 
+                        content: [{ text: "辦理退房，把握在伊豆的最後一天行程。", image: "" }]
+                    },
+                    { 
+                        time: "09:03", icon: "fa-cable-car", title: "【雲端上的天空露台】", location: "伊豆全景公園", 
+                        content: [{ text: "搭乘纜車前往葛城山頂的「碧綠台 (Ao Terrace)」。優雅的空間設計，水池倒映著天空，正前方就是壯麗的富士山。可以在附設的咖啡廳買杯飲料，享受這寧靜的時刻。", image: "https://images.unsplash.com/photo-1601042879364-f3947d3f9c16?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }],
+                        links: [{ url: "https://www.panoramapark.co.jp/tw/", title: "全景公園官網" }]
+                    },
+                    { 
+                        time: "13:05", icon: "fa-road", title: "【漂浮在海上的島嶼】", location: "海螢火蟲停車區", 
+                        content: [{ text: "行駛東京灣 Aqua-Line 橫越東京灣，在人工島「海螢 (Umihotaru)」停留。這裡不僅是休息站，更像個海上購物中心，頂樓觀景台可以眺望東京市區天際線。", image: "https://images.unsplash.com/photo-1542051812871-757508240c8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }],
+                        links: [{ url: "https://www.umihotaru.com/", title: "海螢官網" }]
+                    },
+                    { 
+                        time: "15:17", icon: "fa-vihara", title: "【江戶風情與鰻魚香】", location: "成田山新勝寺 総門", 
+                        content: [{ text: "抵達成田機場附近的成田山新勝寺。壯觀的寺院建築與充滿江戶氣息的表參道。強烈推薦在這裡找一間老字號吃「現烤鰻魚飯」，為旅程畫下完美句點。", image: "https://images.unsplash.com/photo-1624233772879-19ec5dd74b09?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" }]
+                    },
+                    { 
+                        time: "18:00", icon: "fa-car-side", title: "還車", location: "Nippon Rent-a-car 成田", 
+                        content: [{ text: "前往成田機場附近的營業所還車。※記得在指定的加油站加滿油再還車。隨後搭乘接駁車前往機場，準備搭機返台。", image: "" }]
+                    }
+                ]
+            },
+            {
+                day: "Info",
+                date: "重要資訊",
+                title: "行前準備 & 天氣概況",
+                summary: "夏末初秋的伊豆天氣指南與實用連結。",
+                guideNotes: `<p><strong>【九月伊豆氣候與穿搭建議】</strong></p>
+                <p>9月上旬至中旬的伊豆半島仍帶有夏末的熱氣，白天氣溫約在 26-30 度左右，陽光依然強烈；但早晚海風吹拂，或是前往天城山區（如淨蓮瀑布）時，會明顯感受到初秋的涼意。</p>
+                <ul>
+                    <li><strong>穿著：</strong> 以短袖為主，務必攜帶一件薄長袖襯衫或防風外套，應對早晚溫差與山區氣候。</li>
+                    <li><strong>防曬與雨具：</strong> 9月是日本的颱風季，且常有午後陣雨。隨身攜帶晴雨兩用傘是必備的。</li>
+                    <li><strong>鞋子：</strong> 行程中包含海岸步道（城崎海岸）與山區階梯（淨蓮瀑布），建議穿著舒適防滑的運動鞋。</li>
+                </ul>`,
+                activities: [
+                    { 
+                        time: "租車", icon: "fa-car", title: "Nippon Rent-a-car", location: "羽田取車 / 成田還車", 
+                        content: [{ text: "甲地租乙地還 (羽田取 / 成田還)。請確認預約單上包含 ETC 卡租借，以利行駛高速公路。", image: "" }]
+                    },
+                    { 
+                        time: "天氣預報", icon: "fa-cloud-sun", title: "【注意海風與颱風動態】", location: "伊豆", 
+                        content: [{ text:"出發前一週請密切關注日本氣象廳的天氣預報與颱風動態。若遇到強風大浪，部分沿海景點（如堂島遊覽船、城崎海岸吊橋）可能基於安全考量會暫時封閉。", image: "" }],
+                        links: [
+                            { url: "https://tenki.jp/forecast/5/25/3510/22215/", title: "伊豆天氣" },
+                            { url: "https://www.jma.go.jp/jma/index.html", title: "日本氣象廳" }]
+                    }
+                ]
+            }
+        ];
+
+        const locationCoords = {
+            "default": { lat: 34.9769, lon: 139.0963 }, // 伊豆中央
+            "羽田": { lat: 35.5494, lon: 139.7798 },
+            "Sawayaka": { lat: 35.1051, lon: 138.9392 },
+            "熱海": { lat: 35.0963, lon: 139.0717 },
+            "來宮": { lat: 35.1005, lon: 139.0667 },
+            "Izukogen": { lat: 34.8841, lon: 139.1089 },
+            "大室山": { lat: 34.9044, lon: 139.0967 },
+            "城崎": { lat: 34.8885, lon: 139.1365 },
+            "下田": { lat: 34.6796, lon: 138.9454 },
+            "石廊崎": { lat: 34.5986, lon: 138.8358 },
+            "堂島": { lat: 34.7825, lon: 138.7610 },
+            "堂ヶ島": { lat: 34.7825, lon: 138.7610 },
+            "Koganezaki": { lat: 34.8384, lon: 138.7656 },
+            "Amagigoe": { lat: 34.8468, lon: 138.9242 },
+            "淨蓮瀑布": { lat: 34.8213, lon: 138.9200 },
+            "New Hakkeien": { lat: 35.0321, lon: 138.9372 },
+            "修善寺": { lat: 34.9723, lon: 138.9287 },
+            "伊豆全景": { lat: 35.0357, lon: 138.9388 },
+            "海螢": { lat: 35.4633, lon: 139.8732 },
+            "成田": { lat: 35.7641, lon: 140.3861 },
+            "桃園": { lat: 25.0797, lon: 121.2342 }
+        };
+
+        const tabContainer = document.getElementById('tab-container');
+        const itineraryContainer = document.getElementById('itinerary-container');
+        const heroTitle = document.getElementById('hero-title');
+        const heroDesc = document.getElementById('hero-desc');
+        const guideNotes = document.getElementById('guide-notes');
+        const headerDate = document.getElementById('header-date');
+
+        async function fetchRealWeather(locationName, elementId) {
+            let coords = locationCoords["default"];
+            for (const key in locationCoords) {
+                if (locationName.includes(key)) { coords = locationCoords[key]; break; }
+            }
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code,is_day&timezone=Asia%2FTokyo`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.current) {
+                    const info = getWeatherIcon(data.current.weather_code, data.current.is_day);
+                    const el = document.getElementById(elementId);
+                    if (el) el.innerHTML = `<i class="fa-solid ${info.icon} ${info.color}"></i> ${Math.round(data.current.temperature_2m)}°C`;
+                }
+            } catch (error) { console.error("Weather error", error); }
+        }
+
+        function getWeatherIcon(code, isDay) {
+            if (code === 0) return { icon: isDay ? "fa-sun" : "fa-moon", color: "text-orange-500" };
+            if (code <= 3) return { icon: "fa-cloud-sun", color: "text-gray-500" };
+            if (code >= 51 && code <= 67) return { icon: "fa-umbrella", color: "text-blue-500" };
+            return { icon: "fa-cloud", color: "text-gray-400" };
+        }
+
+        function renderTabs() {
+            tabContainer.innerHTML = '';
+            itineraryData.forEach((item, index) => {
+                const btn = document.createElement('button');
+                btn.className = `px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-300 ${index === 0 ? 'tab-active' : 'tab-inactive'}`;
+                btn.innerText = item.day;
+                btn.onclick = () => switchTab(index);
+                tabContainer.appendChild(btn);
+            });
+        }
+
+        function switchTab(index) {
+            const tabs = tabContainer.children;
+            for (let i = 0; i < tabs.length; i++) {
+                if (i === index) { tabs[i].classList.add('tab-active'); tabs[i].classList.remove('tab-inactive'); }
+                else { tabs[i].classList.add('tab-inactive'); tabs[i].classList.remove('tab-active'); }
+            }
+            renderItinerary(index);
+            updateHero(index);
+            itineraryContainer.scrollTop = 0;
+        }
+
+        function renderItinerary(index) {
+            const dayData = itineraryData[index];
+            headerDate.innerText = dayData.date === "重要資訊" ? "INFO" : dayData.date;
+            
+            let html = `
+                <div class="mb-6 fade-in">
+                    <h2 class="text-2xl font-bold serif-font" style="color: var(--text-main);">${dayData.title}</h2>
+                    <p class="text-sm mt-1" style="color: var(--text-sub);">${dayData.summary}</p>
+                    <div class="md:hidden mt-4 p-4 rounded-xl text-sm border border-[var(--primary-color)] shadow-sm" style="background-color: var(--accent-color); color: var(--text-main);">
+                        <p class="font-bold mb-1" style="color: var(--primary-color);"><i class="fa-solid fa-star mr-1"></i> 導遊筆記 & 伴手禮</p>
+                        ${dayData.guideNotes}
+                    </div>
+                </div>
+            `;
+
+            if (dayData.activities) {
+                html += '<div class="relative space-y-6 pl-2">';
+                dayData.activities.forEach((activity, idx) => {
+                    const isLast = idx === dayData.activities.length - 1;
+                    const weatherId = `weather-${index}-${idx}`;
+                    let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
+                    
+                    // 生成多段內容 (Text + Image)
+                    let activityContentHtml = '';
+                    if (activity.content && Array.isArray(activity.content)) {
+                        activity.content.forEach(segment => {
+                            activityContentHtml += `
+                                <div class="mb-4 last:mb-0">
+                                    <div class="mb-3 leading-relaxed p-3 border-l-2 rounded-r-lg" style="font-size: var(--note-font-size); line-height: 1.6; border-color: var(--primary-color); background-color: rgba(43, 122, 11, 0.05); color: var(--text-sub);">
+                                        ${segment.text}
+                                    </div>
+                                    ${segment.image ? `
+                                    <div class="mb-3 overflow-hidden rounded-lg shadow-sm border border-gray-100">
+                                        <img src="${segment.image}" class="w-full h-auto object-cover max-h-64" alt="行程圖片" onerror="this.style.display='none'">
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        });
+                    }
+
+                    html += `
+                        <div class="relative flex gap-4 fade-in ${isLast ? 'last-item' : ''}" style="animation-delay: ${idx * 0.1}s">
+                            <div class="flex flex-col items-center">
+                                <div class="rounded-full border-2 border-white flex items-center justify-center shadow-sm z-10 shrink-0"
+                                     style="width: var(--timeline-icon-size); height: var(--timeline-icon-size); font-size: var(--timeline-icon-font-size); background-color: var(--light-blue); color: white;">
+                                    <i class="fa-solid ${activity.icon}"></i>
+                                </div>
+                                <div class="timeline-line"></div>
+                            </div>
+
+                            <div class="flex-1 bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
+                                <div id="${weatherId}" class="absolute top-4 right-4 text-xs font-medium flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md text-gray-400">
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                </div>
+
+                                <div class="font-bold mb-1 uppercase" style="font-size: var(--meta-font-size); color: var(--primary-color); opacity: 0.9;">${activity.time}</div>
+                                <h3 class="font-bold mb-1" style="font-size: var(--title-font-size); color: var(--text-main);">${activity.title}</h3>
+                                <p class="flex items-center gap-1 mb-3" style="font-size: var(--meta-font-size); color: var(--text-sub);">
+                                    <i class="fa-solid fa-location-dot opacity-50 text-xs"></i> ${activity.location}
+                                </p>
+                                
+                                ${activityContentHtml}
+
+                                <div class="flex flex-wrap gap-2 mt-auto">
+                                    <a href="${mapUrl}" target="_blank" class="nav-btn px-4 py-2 rounded-lg text-center font-bold flex items-center justify-center gap-2 hover:bg-gray-50 flex-grow" style="font-size: var(--meta-font-size);">
+                                        <i class="fa-solid fa-location-arrow" style="color: var(--primary-color);"></i> 導航
+                                    </a>
+                                    
+                                    ${activity.links ? activity.links.map(link => `
+                                        ${(link.url && link.url !== '#') ? `
+                                        <a href="${link.url}" target="_blank" class="nav-btn px-3 py-2 rounded-lg text-center flex items-center justify-center gap-1 hover:bg-gray-50" title="${link.title}">
+                                            <i class="fa-solid fa-link" style="color: var(--primary-color);"></i>
+                                            <span class="text-xs font-medium">${link.title}</span>
+                                        </a>` : ''}
+                                    `).join('') : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    // 延遲呼叫天氣，避免被 API 阻擋
+                    setTimeout(() => fetchRealWeather(activity.location, weatherId), idx * 150);
+                });
+                html += '</div>';
+            }
+            itineraryContainer.innerHTML = html;
+        }
+
+        function updateHero(index) {
+            const data = itineraryData[index];
+            heroTitle.innerText = data.title;
+            heroDesc.innerText = data.summary;
+            guideNotes.innerHTML = data.guideNotes;
+        }
+
+        // 頁面載入完成後初始化
+        window.onload = () => { renderTabs(); switchTab(0); };
+    </script>
+</body>
+</html>
